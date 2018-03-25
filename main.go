@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -91,6 +92,9 @@ func main() {
 			}).Info("Updated user")
 		} else {
 			uidLogger.Info("Added user")
+			if err := makeMailDir(entry.Directory); err != nil {
+				uidLogger.WithError(err).Error("Unable to create maildir for user")
+			}
 		}
 
 		vpt.Upsert(uid, entry)
@@ -106,6 +110,19 @@ func main() {
 	if err := vpt.SaveToFile(cfg.MailPasswordFile); err != nil {
 		log.WithError(err).Fatal("Unable to save passwd database")
 	}
+}
+
+func makeMailDir(dir string) error {
+	if err := os.Mkdir(dir, 0700); err != nil {
+		return err
+	}
+	for _, d := range []string{"tmp", "cur", "new"} {
+		if err := os.Mkdir(path.Join(dir, d), 0700); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func retrieveUsers() (map[string]*vptable.VPEntry, error) {
